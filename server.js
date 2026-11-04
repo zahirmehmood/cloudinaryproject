@@ -36,35 +36,61 @@ app.post('/api/upload', async (req, res) => {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
+    // Verify Cloudinary configuration
+    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+      return res.status(500).json({ 
+        error: 'Cloudinary not configured. Please set environment variables.' 
+      });
+    }
+
     const file = req.files.file;
-    const result = await cloudinary.uploader.upload_stream(
-      {
-        folder: 'creator-portfolio',
-        resource_type: 'auto',
-        eager: [
-          { width: 300, height: 300, crop: 'fill', quality: 'auto', fetch_format: 'auto' },
-          { width: 600, height: 600, crop: 'fill', quality: 'auto', fetch_format: 'auto' },
-          { width: 1200, height: 1200, crop: 'fill', quality: 'auto', fetch_format: 'auto' }
-        ],
-        tags: ['creator-portfolio']
-      },
-      (error, result) => {
-        if (error) {
-          return res.status(500).json({ error: error.message });
+
+    // Validate file
+    if (!file || !file.data) {
+      return res.status(400).json({ error: 'Invalid file data' });
+    }
+
+    const uploadPromise = new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: 'creator-portfolio',
+          resource_type: 'auto',
+          eager: [
+            { width: 300, height: 300, crop: 'fill', quality: 'auto', fetch_format: 'auto' },
+            { width: 600, height: 600, crop: 'fill', quality: 'auto', fetch_format: 'auto' },
+            { width: 1200, height: 1200, crop: 'fill', quality: 'auto', fetch_format: 'auto' }
+          ],
+          tags: ['mediavault']
+        },
+        (error, result) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(result);
+          }
         }
-        res.json({
-          success: true,
-          public_id: result.public_id,
-          url: result.secure_url,
-          eager: result.eager,
-          width: result.width,
-          height: result.height,
-          format: result.format
-        });
-      }
-    ).end(file.data);
+      );
+
+      uploadStream.end(file.data);
+    });
+
+    const result = await uploadPromise;
+
+    res.json({
+      success: true,
+      public_id: result.public_id,
+      url: result.secure_url,
+      eager: result.eager || [],
+      width: result.width,
+      height: result.height,
+      format: result.format
+    });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Upload error:', error);
+    res.status(500).json({ 
+      error: error.message || 'Upload failed',
+      details: process.env.NODE_ENV === 'development' ? error.toString() : undefined
+    });
   }
 });
 
@@ -111,16 +137,34 @@ app.post('/api/transform', (req, res) => {
 // API: Get all assets from folder
 app.get('/api/assets', async (req, res) => {
   try {
-    const result = await cloudinary.api.resources({
-      type: 'upload',
-      prefix: 'creator-portfolio/',
-      max_results: 100,
-      resource_type: 'image'
-    });
+    // Verify Cloudinary configuration
+    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+      return res.status(500).json({ 
+        error: 'Cloudinary not configured. Please set environment variables: CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET' 
+      });
+    }
+
+    let result;
+    try {
+      result = await cloudinary.api.resources({
+        type: 'upload',
+        prefix: 'creator-portfolio/',
+        max_results: 100,
+        resource_type: 'image'
+      });
+    } catch (apiError) {
+      console.error('Cloudinary API Error:', apiError);
+      // If no resources found or API error, return empty array
+      return res.json({
+        success: true,
+        assets: [],
+        message: 'No assets found yet. Upload some images to get started!'
+      });
+    }
 
     res.json({
       success: true,
-      assets: result.resources.map(asset => ({
+      assets: (result.resources || []).map(asset => ({
         public_id: asset.public_id,
         url: cloudinary.url(asset.public_id, {
           transformation: [
@@ -139,7 +183,8 @@ app.get('/api/assets', async (req, res) => {
       }))
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Assets endpoint error:', error);
+    res.status(500).json({ error: error.message, details: error.toString() });
   }
 });
 
@@ -235,11 +280,38 @@ app.post('/api/analyze', async (req, res) => {
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', cloudinary_configured: !!process.env.CLOUDINARY_CLOUD_NAME });
+  const configured = !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET);
+  
+  res.json({ 
+    status: 'ok',
+    cloudinary_configured: configured,
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'NOT SET',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Server Error:', err);
+  res.status(500).json({ 
+    error: err.message,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  });
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`✓ Server running on http://localhost:${PORT}`);
-  console.log(`✓ Cloudinary Cloud: ${process.env.CLOUDINARY_CLOUD_NAME}`);
+const server = app.listen(PORT, () => {
+  console.log(`✓ MediaVault Server running on http://localhost:${PORT}`);
+  console.log(`✓ Cloudinary Cloud: ${process.env.CLOUDINARY_CLOUD_NAME || 'NOT CONFIGURED'}`);
+  console.log(`✓ Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`✓ API Health: http://localhost:${PORT}/api/health`);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
 });

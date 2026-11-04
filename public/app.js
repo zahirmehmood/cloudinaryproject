@@ -78,9 +78,15 @@ async function handleFileUpload(file) {
         clearInterval(interval);
         progressBar.style.width = '100%';
 
+        // Check if response is ok
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || `HTTP ${response.status}`);
+        }
+
         const data = await response.json();
 
-        if (response.ok) {
+        if (response.ok && data.success) {
             uploadStatus.classList.add('success');
             uploadStatus.textContent = `✓ Uploaded successfully! Public ID: ${data.public_id}`;
             fileInput.value = '';
@@ -92,9 +98,10 @@ async function handleFileUpload(file) {
                 progressBar.style.width = '0%';
             }, 500);
         } else {
-            throw new Error(data.error);
+            throw new Error(data.error || 'Upload failed');
         }
     } catch (error) {
+        console.error('Upload error:', error);
         uploadProgress.classList.add('hidden');
         uploadStatus.classList.add('error');
         uploadStatus.textContent = `✗ Upload failed: ${error.message}`;
@@ -108,16 +115,30 @@ async function loadGallery() {
         galleryStatus.textContent = 'Loading gallery...';
         
         const response = await fetch('/api/assets');
+        
+        // Check if response is ok
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || `HTTP ${response.status}`);
+        }
+
+        // Check content type
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Server returned invalid content type. Please check environment variables.');
+        }
+
         const data = await response.json();
 
         if (!data.success) {
-            throw new Error(data.error);
+            throw new Error(data.error || 'Failed to load gallery');
         }
 
         gallery.innerHTML = '';
 
-        if (data.assets.length === 0) {
-            galleryStatus.textContent = 'No images uploaded yet. Upload one to get started!';
+        if (!data.assets || data.assets.length === 0) {
+            galleryStatus.classList.add('success');
+            galleryStatus.textContent = data.message || '📸 No images yet. Upload one to get started!';
             return;
         }
 
@@ -128,7 +149,7 @@ async function loadGallery() {
             const publicIdWithoutFolder = asset.public_id.replace('creator-portfolio/', '');
             
             item.innerHTML = `
-                <img src="${asset.secure_url}" alt="Gallery item">
+                <img src="${asset.secure_url}" alt="Gallery item" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22%3E%3Crect fill=%22%23ddd%22 width=%22100%22 height=%22100%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-size=%2214%22 fill=%22%23999%22%3EImage Error%3C/text%3E%3C/svg%3E'">
                 <div class="gallery-item-info">
                     <div class="gallery-item-id">${publicIdWithoutFolder}</div>
                     <div class="gallery-item-actions">
@@ -158,8 +179,9 @@ async function loadGallery() {
         galleryStatus.classList.add('success');
         galleryStatus.textContent = `✓ Loaded ${data.assets.length} image(s)`;
     } catch (error) {
+        console.error('Gallery load error:', error);
         galleryStatus.classList.add('error');
-        galleryStatus.textContent = `✗ Failed to load gallery: ${error.message}`;
+        galleryStatus.textContent = `✗ Error: ${error.message}`;
     }
 }
 
