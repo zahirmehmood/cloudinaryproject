@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloudinary Creator Portfolio</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>☁️ Cloudinary Creator Portfolio</h1>
+            <p>Showcase media with intelligent transformations and AI analysis</p>
+        </header>
+
+        <main>
+            <!-- Upload Section -->
+            <section class="section upload-section">
+                <h2>📤 Upload Media</h2>
+                <div class="upload-area" id="uploadArea">
+                    <p>Drag & drop your images here or click to browse</p>
+                    <input type="file" id="fileInput" accept="image/*" hidden>
+                </div>
+                <div id="uploadProgress" class="progress hidden">
+                    <div class="progress-bar"></div>
+                </div>
+                <div id="uploadStatus" class="status-message"></div>
+            </section>
+
+            <!-- Gallery Section -->
+            <section class="section gallery-section">
+                <h2>🎨 Media Gallery</h2>
+                <button id="refreshBtn" class="btn btn-secondary">🔄 Refresh Gallery</button>
+                <div id="gallery" class="gallery"></div>
+                <div id="galleryStatus" class="status-message"></div>
+            </section>
+
+            <!-- Transform Section -->
+            <section class="section transform-section">
+                <h2>✨ Transform Media</h2>
+                <div class="transform-controls">
+                    <input type="text" id="publicId" placeholder="Enter public_id or select from gallery" class="input-field">
+                    
+                    <div class="control-group">
+                        <label>Width:</label>
+                        <input type="number" id="width" placeholder="Auto" class="input-field" min="1">
+                    </div>
+                    
+                    <div class="control-group">
+                        <label>Height:</label>
+                        <input type="number" id="height" placeholder="Auto" class="input-field" min="1">
+                    </div>
+                    
+                    <div class="control-group">
+                        <label>Effect:</label>
+                        <select id="effect" class="input-field">
+                            <option value="">None</option>
+                            <option value="grayscale">Grayscale</option>
+                            <option value="sepia">Sepia</option>
+                            <option value="blur">Blur</option>
+                            <option value="cartoonify">Cartoonify</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label>Quality:</label>
+                        <select id="quality" class="input-field">
+                            <option value="auto">Auto</option>
+                            <option value="100">100 (Best)</option>
+                            <option value="80">80</option>
+                            <option value="60">60</option>
+                            <option value="40">40</option>
+                        </select>
+                    </div>
+                    
+                    <button id="transformBtn" class="btn btn-primary">🎯 Apply Transform</button>
+                </div>
+                
+                <div id="transformResult" class="transform-result hidden">
+                    <h3>Transformation Result:</h3>
+                    <img id="transformedImage" src="" alt="Transformed image">
+                    <p id="transformUrl" class="url-display"></p>
+                    <button id="copyUrlBtn" class="btn btn-secondary">📋 Copy URL</button>
+                </div>
+            </section>
+
+            <!-- Analysis Section -->
+            <section class="section analysis-section">
+                <h2>🔍 Media Analysis</h2>
+                <div class="analysis-controls">
+                    <input type="text" id="analyzePublicId" placeholder="Enter public_id to analyze" class="input-field">
+                    <button id="analyzeBtn" class="btn btn-primary">📊 Analyze Media</button>
+                </div>
+                
+                <div id="analysisResult" class="analysis-result hidden">
+                    <div class="analysis-info">
+                        <h3>Asset Information</h3>
+                        <div id="assetInfo" class="info-grid"></div>
+                    </div>
+                    
+                    <div class="analysis-transformations">
+                        <h3>Sample Transformations</h3>
+                        <div id="transformationGrid" class="transformation-grid"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Documentation Section -->
+            <section class="section docs-section">
+                <h2>📚 Features Demonstrated</h2>
+                <div class="features-list">
+                    <div class="feature">
+                        <h3>🚀 Upload API</h3>
+                        <p>Upload images with eager transformations for instant thumbnail generation</p>
+                    </div>
+                    <div class="feature">
+                        <h3>🎨 Transformations</h3>
+                        <p>Apply real-time transformations: resizing, effects, quality optimization</p>
+                    </div>
+                    <div class="feature">
+                        <h3>⚡ Auto Optimization</h3>
+                        <p>f_auto & q_auto for format and quality optimization</p>
+                    </div>
+                    <div class="feature">
+                        <h3>🗂️ Asset Management</h3>
+                        <p>Organize, search, and delete media assets with folders and tags</p>
+                    </div>
+                    <div class="feature">
+                        <h3>📦 Responsive</h3>
+                        <p>Generate multiple sizes for responsive image delivery</p>
+                    </div>
+                    <div class="feature">
+                        <h3>🔐 Secure URLs</h3>
+                        <p>All URLs use HTTPS for secure delivery</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>Built with ❤️ using Cloudinary APIs • <a href="https://cloudinary.com/documentation" target="_blank">Cloudinary Docs</a></p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

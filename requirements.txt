@@ -1,0 +1,6 @@
+# Python dependencies for Flask version
+Flask==2.3.2
+cloudinary==1.33.0
+python-dotenv==1.0.0
+flask-cors==4.0.0
+Werkzeug==2.3.6
