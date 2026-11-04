@@ -1,7 +1,7 @@
 {
-  "name": "cloudinary-creator-portfolio",
-  "version": "1.0.0",
-  "description": "A media portfolio platform using Cloudinary APIs showcasing upload, transformation, optimization, and AI analysis features",
+  "name": "mediavault",
+  "version": "2.0.0",
+  "description": "MediaVault - Professional media management platform with intelligent transformations, AI-powered analysis, and enterprise-grade optimization powered by Cloudinary",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -19,11 +19,14 @@
   },
   "keywords": [
     "cloudinary",
-    "media",
-    "portfolio",
+    "media-management",
+    "image-optimization",
+    "video-processing",
     "ai-analysis",
-    "image-optimization"
+    "asset-management",
+    "cdn-delivery",
+    "digital-asset"
   ],
-  "author": "",
+  "author": "Zahir Mehmood",
   "license": "MIT"
 }

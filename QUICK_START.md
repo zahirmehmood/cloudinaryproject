@@ -1,6 +1,6 @@
-# ⚡ Quick Start - 5 Minutes to Running
+# ⚡ Quick Start - MediaVault in 5 Minutes
 
-Get this Cloudinary project running in 5 minutes!
+Get MediaVault running in 5 minutes!
 
 ## Step 1: Install Dependencies (1 min)
 
@@ -56,11 +56,11 @@ Visit: http://localhost:5000
 
 | What | Why | How |
 |------|-----|-----|
-| Upload | Store media on Cloudinary | Multipart form upload → Cloudinary API |
-| Gallery | See all your assets | List assets → Cloudinary Admin API |
-| Transform | Resize, crop, effects | URL generation with transformations |
-| Analyze | See variants | Generate URLs with different settings |
-| Delete | Remove old media | Call delete endpoint → Cloudinary API |
+| Upload | Store media assets securely | Multipart form upload → Cloudinary API |
+| Library | Browse and manage all assets | List assets → Cloudinary Admin API |
+| Transform | Professional image optimization | URL generation with smart transformations |
+| Analyze | Understand media performance | Generate optimized variants for all devices |
+| Delete | Remove obsolete media | Call delete endpoint → Cloudinary API |
 
 ## 🚀 Ready for More?
 
