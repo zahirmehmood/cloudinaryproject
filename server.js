@@ -3,24 +3,35 @@ const cloudinary = require('cloudinary').v2;
 const dotenv = require('dotenv');
 const path = require('path');
 const fileUpload = require('express-fileupload');
-const fs = require('fs');
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Configure Cloudinary
+// Configure Cloudinary - Use environment variables or fallback to embedded defaults
+const CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || 'kw8z8fok';
+const API_KEY = process.env.CLOUDINARY_API_KEY || '881328589738888';
+const API_SECRET = process.env.CLOUDINARY_API_SECRET || 'iL450pPE_hK0NNk7ZuZ3hjNGq8Q';
+
+console.log('Configuring Cloudinary with cloud:', CLOUD_NAME);
+
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
+  cloud_name: CLOUD_NAME,
+  api_key: API_KEY,
+  api_secret: API_SECRET
 });
 
 // Middleware
 app.use(express.json());
 app.use(express.static('public'));
 app.use(fileUpload());
+
+// Logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} ${req.method} ${req.path}`);
+  next();
+});
 
 // Routes
 
@@ -29,31 +40,41 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Debug endpoint
+app.get('/api/debug', (req, res) => {
+  res.json({
+    status: 'ok',
+    cloudinary_configured: !!CLOUD_NAME && !!API_KEY && !!API_SECRET,
+    cloud_name: CLOUD_NAME,
+    has_api_key: !!API_KEY,
+    has_api_secret: !!API_SECRET,
+    port: PORT,
+    node_env: process.env.NODE_ENV || 'development'
+  });
+});
+
 // API: Upload Image
 app.post('/api/upload', async (req, res) => {
   try {
+    console.log('Upload endpoint called');
+    
     if (!req.files || Object.keys(req.files).length === 0) {
+      console.log('No files uploaded');
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    // Verify Cloudinary configuration
-    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
-      return res.status(500).json({ 
-        error: 'Cloudinary not configured. Please set environment variables.' 
-      });
-    }
-
     const file = req.files.file;
+    console.log(`Uploading: ${file.name} (${file.size} bytes)`);
 
-    // Validate file
     if (!file || !file.data) {
+      console.log('Invalid file data');
       return res.status(400).json({ error: 'Invalid file data' });
     }
 
     const uploadPromise = new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
-          folder: 'creator-portfolio',
+          folder: 'mediavault',
           resource_type: 'auto',
           eager: [
             { width: 300, height: 300, crop: 'fill', quality: 'auto', fetch_format: 'auto' },
@@ -64,8 +85,10 @@ app.post('/api/upload', async (req, res) => {
         },
         (error, result) => {
           if (error) {
+            console.error('Upload error:', error);
             reject(error);
           } else {
+            console.log('Upload success:', result.public_id);
             resolve(result);
           }
         }
@@ -86,10 +109,10 @@ app.post('/api/upload', async (req, res) => {
       format: result.format
     });
   } catch (error) {
-    console.error('Upload error:', error);
+    console.error('Upload error:', error.message);
     res.status(500).json({ 
       error: error.message || 'Upload failed',
-      details: process.env.NODE_ENV === 'development' ? error.toString() : undefined
+      type: error.constructor.name
     });
   }
 });
@@ -130,6 +153,7 @@ app.post('/api/transform', (req, res) => {
 
     res.json({ url, public_id });
   } catch (error) {
+    console.error('Transform error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -137,24 +161,19 @@ app.post('/api/transform', (req, res) => {
 // API: Get all assets from folder
 app.get('/api/assets', async (req, res) => {
   try {
-    // Verify Cloudinary configuration
-    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
-      return res.status(500).json({ 
-        error: 'Cloudinary not configured. Please set environment variables: CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET' 
-      });
-    }
-
+    console.log('Loading assets...');
+    
     let result;
     try {
       result = await cloudinary.api.resources({
         type: 'upload',
-        prefix: 'creator-portfolio/',
+        prefix: 'mediavault/',
         max_results: 100,
         resource_type: 'image'
       });
     } catch (apiError) {
-      console.error('Cloudinary API Error:', apiError);
-      // If no resources found or API error, return empty array
+      console.error('Cloudinary API error:', apiError.message);
+      // Return empty array on error
       return res.json({
         success: true,
         assets: [],
@@ -162,29 +181,36 @@ app.get('/api/assets', async (req, res) => {
       });
     }
 
+    const assets = (result.resources || []).map(asset => ({
+      public_id: asset.public_id,
+      url: cloudinary.url(asset.public_id, {
+        transformation: [
+          { width: 300, height: 300, crop: 'fill' },
+          { quality: 'auto', fetch_format: 'auto' }
+        ]
+      }),
+      secure_url: cloudinary.url(asset.public_id, {
+        transformation: [
+          { width: 300, height: 300, crop: 'fill' },
+          { quality: 'auto', fetch_format: 'auto' }
+        ],
+        secure: true
+      }),
+      created_at: asset.created_at
+    }));
+
+    console.log(`Found ${assets.length} assets`);
+    
     res.json({
       success: true,
-      assets: (result.resources || []).map(asset => ({
-        public_id: asset.public_id,
-        url: cloudinary.url(asset.public_id, {
-          transformation: [
-            { width: 300, height: 300, crop: 'fill' },
-            { quality: 'auto', fetch_format: 'auto' }
-          ]
-        }),
-        secure_url: cloudinary.url(asset.public_id, {
-          transformation: [
-            { width: 300, height: 300, crop: 'fill' },
-            { quality: 'auto', fetch_format: 'auto' }
-          ],
-          secure: true
-        }),
-        created_at: asset.created_at
-      }))
+      assets: assets
     });
   } catch (error) {
-    console.error('Assets endpoint error:', error);
-    res.status(500).json({ error: error.message, details: error.toString() });
+    console.error('Assets error:', error);
+    res.status(500).json({ 
+      error: error.message,
+      type: error.constructor.name
+    });
   }
 });
 
@@ -192,7 +218,9 @@ app.get('/api/assets', async (req, res) => {
 app.delete('/api/assets/:public_id', async (req, res) => {
   try {
     const { public_id } = req.params;
-    const fullPublicId = `creator-portfolio/${decodeURIComponent(public_id)}`;
+    const fullPublicId = `mediavault/${decodeURIComponent(public_id)}`;
+
+    console.log(`Deleting: ${fullPublicId}`);
 
     const result = await cloudinary.uploader.destroy(fullPublicId);
 
@@ -202,11 +230,12 @@ app.delete('/api/assets/:public_id', async (req, res) => {
       result
     });
   } catch (error) {
+    console.error('Delete error:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// API: Generate Optimization Report
+// API: Analyze asset
 app.post('/api/analyze', async (req, res) => {
   try {
     const { public_id } = req.body;
@@ -215,13 +244,9 @@ app.post('/api/analyze', async (req, res) => {
       return res.status(400).json({ error: 'public_id is required' });
     }
 
-    const asset = await cloudinary.api.resource(public_id);
+    console.log(`Analyzing: ${public_id}`);
 
-    const originalUrl = cloudinary.url(public_id);
-    const optimizedUrl = cloudinary.url(public_id, {
-      quality: 'auto',
-      fetch_format: 'auto'
-    });
+    const asset = await cloudinary.api.resource(public_id);
 
     const report = {
       asset: {
@@ -234,8 +259,11 @@ app.post('/api/analyze', async (req, res) => {
         created_at: asset.created_at
       },
       urls: {
-        original: originalUrl,
-        optimized: optimizedUrl
+        original: cloudinary.url(public_id),
+        optimized: cloudinary.url(public_id, {
+          quality: 'auto',
+          fetch_format: 'auto'
+        })
       },
       transformations: {
         thumbnail: cloudinary.url(public_id, {
@@ -274,37 +302,46 @@ app.post('/api/analyze', async (req, res) => {
 
     res.json(report);
   } catch (error) {
+    console.error('Analysis error:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
 // Health check
 app.get('/api/health', (req, res) => {
-  const configured = !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET);
-  
   res.json({ 
     status: 'ok',
-    cloudinary_configured: configured,
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'NOT SET',
+    cloudinary_configured: true,
+    cloud_name: CLOUD_NAME,
     timestamp: new Date().toISOString()
   });
 });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('Server Error:', err);
+  console.error('Server error:', err);
   res.status(500).json({ 
     error: err.message,
-    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    type: err.constructor.name
   });
+});
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ error: 'Not found' });
 });
 
 // Start server
 const server = app.listen(PORT, () => {
-  console.log(`✓ MediaVault Server running on http://localhost:${PORT}`);
-  console.log(`✓ Cloudinary Cloud: ${process.env.CLOUDINARY_CLOUD_NAME || 'NOT CONFIGURED'}`);
+  console.log('\n' + '='.repeat(60));
+  console.log('🎯 MediaVault Server Started');
+  console.log('='.repeat(60));
+  console.log(`✓ Server running on http://localhost:${PORT}`);
+  console.log(`✓ Cloudinary Cloud: ${CLOUD_NAME}`);
   console.log(`✓ Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`✓ API Health: http://localhost:${PORT}/api/health`);
+  console.log(`✓ API Debug: http://localhost:${PORT}/api/debug`);
+  console.log('='.repeat(60) + '\n');
 });
 
 // Graceful shutdown
