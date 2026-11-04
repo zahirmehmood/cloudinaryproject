@@ -267,12 +267,9 @@ vercel deploy
 
 ## 📝 API Key Configuration
 
-Your credentials are already provided:
-- Cloud Name: `kw8z8fok`
-- API Key: `881328589738888`
-- API Secret: See `.env` file
+Copy your cloud name, API key, and API secret from the Cloudinary Console into local or deployment environment variables. Never commit real credential values.
 
-⚠️ **IMPORTANT**: Keep API Secret private! Never commit to Git or expose in client-side code.
+⚠️ **IMPORTANT**: Keep the API secret private and rotate it immediately if it is ever exposed.
 
 ## 🎨 UI Features
 

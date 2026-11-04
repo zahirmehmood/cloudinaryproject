@@ -16,9 +16,9 @@ Create `.env` file with your credentials:
 
 ```bash
 cat > .env << EOF
-CLOUDINARY_CLOUD_NAME=kw8z8fok
-CLOUDINARY_API_KEY=881328589738888
-CLOUDINARY_API_SECRET=iL450pPE_hK0NNk7ZuZ3hjNGq8Q
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
 PORT=5000
 NODE_ENV=development
 EOF
@@ -33,7 +33,7 @@ npm start
 You should see:
 ```
 ✓ Server running on http://localhost:5000
-✓ Cloudinary Cloud: kw8z8fok
+✓ Cloudinary Cloud: your_cloud_name
 ```
 
 ## Step 4: Open in Browser (1 min)

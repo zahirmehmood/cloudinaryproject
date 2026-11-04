@@ -16,9 +16,9 @@ The API returned HTML instead of JSON. This usually means:
 cat .env
 
 # Should have these (fill in your actual values):
-CLOUDINARY_CLOUD_NAME=kw8z8fok
-CLOUDINARY_API_KEY=881328589738888
-CLOUDINARY_API_SECRET=iL450pPE_hK0NNk7ZuZ3hjNGq8Q
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
 PORT=5000
 ```
 
@@ -44,7 +44,7 @@ http://localhost:5000/api/health
 {
   "status": "ok",
   "cloudinary_configured": true,
-  "cloud_name": "kw8z8fok",
+  "cloud_name": "your_cloud_name",
   "timestamp": "..."
 }
 ```
@@ -149,7 +149,7 @@ taskkill /PID <PID> /F  # Kill it
 When running `npm start`, watch the console output:
 ```
 ✓ MediaVault Server running on http://localhost:5000
-✓ Cloudinary Cloud: kw8z8fok
+✓ Cloudinary Cloud: your_cloud_name
 ✓ Environment: development
 ✓ API Health: http://localhost:5000/api/health
 ```

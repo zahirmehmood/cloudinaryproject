@@ -33,9 +33,9 @@ heroku create your-cloudinary-portfolio
 
 **Step 4: Set Environment Variables**
 ```bash
-heroku config:set CLOUDINARY_CLOUD_NAME=kw8z8fok
-heroku config:set CLOUDINARY_API_KEY=881328589738888
-heroku config:set CLOUDINARY_API_SECRET=iL450pPE_hK0NNk7ZuZ3hjNGq8Q
+heroku config:set CLOUDINARY_CLOUD_NAME=your_cloud_name
+heroku config:set CLOUDINARY_API_KEY=your_api_key
+heroku config:set CLOUDINARY_API_SECRET=your_api_secret
 ```
 
 **Step 5: Deploy**
@@ -62,11 +62,16 @@ heroku open
 
 ### 3. Vercel
 
-1. Push code to GitHub
-2. Go to https://vercel.com
-3. Import GitHub repository
-4. Add environment variables
-5. Deploy!
+1. Push the repository to GitHub and import it at https://vercel.com.
+2. Open **Project Settings → Environment Variables**.
+3. Add these variables for **Production**, **Preview**, and **Development** as needed:
+   - `CLOUDINARY_CLOUD_NAME`
+   - `CLOUDINARY_API_KEY`
+   - `CLOUDINARY_API_SECRET`
+4. Open **Deployments**, select the latest deployment, and choose **Redeploy** so the functions receive the variables.
+5. Verify `https://your-project.vercel.app/api/health` returns JSON with `"cloudinary_configured": true`.
+
+The repository includes `vercel.json` and serverless functions in `api/`. Do not set `public` as a static-only output directory; the `/api/*` functions must be deployed with the frontend.
 
 ### 4. Railway
 

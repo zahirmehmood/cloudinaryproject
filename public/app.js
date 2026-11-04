@@ -27,6 +27,31 @@ const analysisResult = document.getElementById('analysisResult');
 const assetInfo = document.getElementById('assetInfo');
 const transformationGrid = document.getElementById('transformationGrid');
 
+async function parseApiResponse(response) {
+    const contentType = response.headers.get('content-type') || '';
+    const rawBody = await response.text();
+
+    if (!contentType.includes('application/json')) {
+        const reason = response.status === 404
+            ? 'The API endpoint is unavailable. Redeploy the project with its Vercel serverless functions.'
+            : 'The server returned a non-JSON response.';
+        throw new Error(`${reason} (HTTP ${response.status})`);
+    }
+
+    let data;
+    try {
+        data = rawBody ? JSON.parse(rawBody) : {};
+    } catch {
+        throw new Error(`The server returned invalid JSON. (HTTP ${response.status})`);
+    }
+
+    if (!response.ok) {
+        throw new Error(data.error || `Request failed. (HTTP ${response.status})`);
+    }
+
+    return data;
+}
+
 // Upload handlers
 uploadArea.addEventListener('click', () => fileInput.click());
 
@@ -78,15 +103,9 @@ async function handleFileUpload(file) {
         clearInterval(interval);
         progressBar.style.width = '100%';
 
-        // Check if response is ok
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || `HTTP ${response.status}`);
-        }
+        const data = await parseApiResponse(response);
 
-        const data = await response.json();
-
-        if (response.ok && data.success) {
+        if (data.success) {
             uploadStatus.classList.add('success');
             uploadStatus.textContent = `✓ Uploaded successfully! Public ID: ${data.public_id}`;
             fileInput.value = '';
@@ -116,19 +135,7 @@ async function loadGallery() {
         
         const response = await fetch('/api/assets');
         
-        // Check if response is ok
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || `HTTP ${response.status}`);
-        }
-
-        // Check content type
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-            throw new Error('Server returned invalid content type. Please check environment variables.');
-        }
-
-        const data = await response.json();
+        const data = await parseApiResponse(response);
 
         if (!data.success) {
             throw new Error(data.error || 'Failed to load gallery');
@@ -146,7 +153,7 @@ async function loadGallery() {
             const item = document.createElement('div');
             item.className = 'gallery-item';
             
-            const publicIdWithoutFolder = asset.public_id.replace('creator-portfolio/', '');
+            const publicIdWithoutFolder = asset.public_id.replace('mediavault/', '');
             
             item.innerHTML = `
                 <img src="${asset.secure_url}" alt="Gallery item" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22%3E%3Crect fill=%22%23ddd%22 width=%22100%22 height=%22100%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-size=%2214%22 fill=%22%23999%22%3EImage Error%3C/text%3E%3C/svg%3E'">
@@ -187,20 +194,16 @@ async function loadGallery() {
 
 async function deleteAsset(publicId) {
     try {
-        const response = await fetch(`/api/assets/${encodeURIComponent(publicId)}`, {
+        const response = await fetch(`/api/assets?public_id=${encodeURIComponent(publicId)}`, {
             method: 'DELETE'
         });
 
-        const data = await response.json();
+        await parseApiResponse(response);
 
-        if (response.ok) {
-            galleryStatus.classList.remove('error');
-            galleryStatus.classList.add('success');
-            galleryStatus.textContent = '✓ Image deleted successfully';
-            loadGallery();
-        } else {
-            throw new Error(data.error);
-        }
+        galleryStatus.classList.remove('error');
+        galleryStatus.classList.add('success');
+        galleryStatus.textContent = '✓ Image deleted successfully';
+        loadGallery();
     } catch (error) {
         galleryStatus.classList.remove('success');
         galleryStatus.classList.add('error');
@@ -232,15 +235,11 @@ transformBtn.addEventListener('click', async () => {
             })
         });
 
-        const data = await response.json();
+        const data = await parseApiResponse(response);
 
-        if (response.ok) {
-            transformedImage.src = data.url;
-            transformUrl.textContent = data.url;
-            transformResult.classList.remove('hidden');
-        } else {
-            alert(`Transform failed: ${data.error}`);
-        }
+        transformedImage.src = data.url;
+        transformUrl.textContent = data.url;
+        transformResult.classList.remove('hidden');
     } catch (error) {
         alert(`Transform error: ${error.message}`);
     }
@@ -273,13 +272,8 @@ analyzeBtn.addEventListener('click', async () => {
             body: JSON.stringify({ public_id: publicId })
         });
 
-        const report = await response.json();
-
-        if (response.ok) {
-            displayAnalysisReport(report);
-        } else {
-            alert(`Analysis failed: ${report.error}`);
-        }
+        const report = await parseApiResponse(response);
+        displayAnalysisReport(report);
     } catch (error) {
         alert(`Analysis error: ${error.message}`);
     }

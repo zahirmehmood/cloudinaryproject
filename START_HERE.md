@@ -190,14 +190,14 @@ python python_example.py
 
 ## 🌐 Your Credentials
 
-Already configured! Just copy to `.env`:
+Add these values to your local `.env` file. Copy them from your Cloudinary Console and never commit the real values:
 ```env
-CLOUDINARY_CLOUD_NAME=kw8z8fok
-CLOUDINARY_API_KEY=881328589738888
-CLOUDINARY_API_SECRET=iL450pPE_hK0NNk7ZuZ3hjNGq8Q
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
 ```
 
-(These are already in the code)
+For Vercel, add the same variables under **Project Settings → Environment Variables**, then redeploy.
 
 ---
 

@@ -80,9 +80,9 @@ Choose one deployment option:
 **Option A: Heroku (Quick)**
 ```bash
 heroku create your-portfolio-name
-heroku config:set CLOUDINARY_CLOUD_NAME=kw8z8fok
-heroku config:set CLOUDINARY_API_KEY=881328589738888
-heroku config:set CLOUDINARY_API_SECRET=iL450pPE_hK0NNk7ZuZ3hjNGq8Q
+heroku config:set CLOUDINARY_CLOUD_NAME=your_cloud_name
+heroku config:set CLOUDINARY_API_KEY=your_api_key
+heroku config:set CLOUDINARY_API_SECRET=your_api_secret
 git push heroku main
 ```
 

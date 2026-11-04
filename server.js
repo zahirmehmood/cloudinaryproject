@@ -1,26 +1,16 @@
 const express = require('express');
-const cloudinary = require('cloudinary').v2;
 const dotenv = require('dotenv');
 const path = require('path');
 const fileUpload = require('express-fileupload');
 
 dotenv.config();
 
+const { cloudinary, CLOUD_NAME, isConfigured, requireCloudinary } = require('./lib/cloudinary');
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Configure Cloudinary - Use environment variables or fallback to embedded defaults
-const CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || 'kw8z8fok';
-const API_KEY = process.env.CLOUDINARY_API_KEY || '881328589738888';
-const API_SECRET = process.env.CLOUDINARY_API_SECRET || 'iL450pPE_hK0NNk7ZuZ3hjNGq8Q';
-
-console.log('Configuring Cloudinary with cloud:', CLOUD_NAME);
-
-cloudinary.config({
-  cloud_name: CLOUD_NAME,
-  api_key: API_KEY,
-  api_secret: API_SECRET
-});
+console.log('Cloudinary configuration:', isConfigured ? `ready (${CLOUD_NAME})` : 'missing environment variables');
 
 // Middleware
 app.use(express.json());
@@ -43,14 +33,19 @@ app.get('/', (req, res) => {
 // Debug endpoint
 app.get('/api/debug', (req, res) => {
   res.json({
-    status: 'ok',
-    cloudinary_configured: !!CLOUD_NAME && !!API_KEY && !!API_SECRET,
-    cloud_name: CLOUD_NAME,
-    has_api_key: !!API_KEY,
-    has_api_secret: !!API_SECRET,
+    status: isConfigured ? 'ok' : 'configuration_required',
+    cloudinary_configured: isConfigured,
+    cloud_name: CLOUD_NAME || null,
     port: PORT,
     node_env: process.env.NODE_ENV || 'development'
   });
+});
+
+// Reject media API calls cleanly when credentials are missing.
+app.use('/api', (req, res, next) => {
+  if (req.path === '/health' || req.path === '/debug') return next();
+  if (!requireCloudinary(res)) return;
+  next();
 });
 
 // API: Upload Image
@@ -120,10 +115,14 @@ app.post('/api/upload', async (req, res) => {
 // API: Get Optimized URL
 app.post('/api/transform', (req, res) => {
   try {
-    const { public_id, width, height, effect, quality } = req.body;
+    let { public_id, width, height, effect, quality } = req.body;
 
     if (!public_id) {
       return res.status(400).json({ error: 'public_id is required' });
+    }
+
+    if (!public_id.startsWith('mediavault/')) {
+      public_id = `mediavault/${public_id}`;
     }
 
     const transformations = [];
@@ -173,11 +172,8 @@ app.get('/api/assets', async (req, res) => {
       });
     } catch (apiError) {
       console.error('Cloudinary API error:', apiError.message);
-      // Return empty array on error
-      return res.json({
-        success: true,
-        assets: [],
-        message: 'No assets found yet. Upload some images to get started!'
+      return res.status(502).json({
+        error: 'Cloudinary could not load the media library. Verify the server credentials and try again.'
       });
     }
 
@@ -218,7 +214,10 @@ app.get('/api/assets', async (req, res) => {
 app.delete('/api/assets/:public_id', async (req, res) => {
   try {
     const { public_id } = req.params;
-    const fullPublicId = `mediavault/${decodeURIComponent(public_id)}`;
+    const decodedPublicId = decodeURIComponent(public_id);
+    const fullPublicId = decodedPublicId.startsWith('mediavault/')
+      ? decodedPublicId
+      : `mediavault/${decodedPublicId}`;
 
     console.log(`Deleting: ${fullPublicId}`);
 
@@ -238,10 +237,14 @@ app.delete('/api/assets/:public_id', async (req, res) => {
 // API: Analyze asset
 app.post('/api/analyze', async (req, res) => {
   try {
-    const { public_id } = req.body;
+    let { public_id } = req.body;
 
     if (!public_id) {
       return res.status(400).json({ error: 'public_id is required' });
+    }
+
+    if (!public_id.startsWith('mediavault/')) {
+      public_id = `mediavault/${public_id}`;
     }
 
     console.log(`Analyzing: ${public_id}`);
@@ -309,10 +312,10 @@ app.post('/api/analyze', async (req, res) => {
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'ok',
-    cloudinary_configured: true,
-    cloud_name: CLOUD_NAME,
+  res.status(isConfigured ? 200 : 503).json({
+    status: isConfigured ? 'ok' : 'configuration_required',
+    cloudinary_configured: isConfigured,
+    cloud_name: CLOUD_NAME || null,
     timestamp: new Date().toISOString()
   });
 });
@@ -337,7 +340,7 @@ const server = app.listen(PORT, () => {
   console.log('🎯 MediaVault Server Started');
   console.log('='.repeat(60));
   console.log(`✓ Server running on http://localhost:${PORT}`);
-  console.log(`✓ Cloudinary Cloud: ${CLOUD_NAME}`);
+  console.log(`✓ Cloudinary Cloud: ${CLOUD_NAME || 'NOT CONFIGURED'}`);
   console.log(`✓ Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`✓ API Health: http://localhost:${PORT}/api/health`);
   console.log(`✓ API Debug: http://localhost:${PORT}/api/debug`);

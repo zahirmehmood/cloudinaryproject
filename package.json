@@ -12,7 +12,8 @@
     "cloudinary": "^1.40.0",
     "dotenv": "^16.3.1",
     "multer": "^1.4.5-lts.1",
-    "express-fileupload": "^1.5.0"
+    "express-fileupload": "^1.5.0",
+    "formidable": "^3.5.1"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
